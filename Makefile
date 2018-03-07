@@ -4,18 +4,22 @@ SYSROOT	:= $(PREFIX)/$(ARCH)
 KERNEL	?= $(PWD)/../linux-new
 KERNEL_ARCH	?= mips
 
-GCC_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
+GCC_DOWNLOAD	?= https://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
 GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
 MPFR_DOWNLOAD	?= http://www.mpfr.org/mpfr-current/mpfr-4.0.1.tar.xz
 MPC_DOWNLOAD	?= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
-GDB_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
-GLIBC_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
-BINUTILS_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
+ISL_DOWNLOAD	?= http://isl.gforge.inria.fr/isl-0.19.tar.xz
+CLOOG_DOWNLOAD	?= https://www.bastoul.net/cloog/pages/download/cloog-0.18.4.tar.gz
+GDB_DOWNLOAD	?= https://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
+GLIBC_DOWNLOAD	?= https://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
+BINUTILS_DOWNLOAD	?= https://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
 
 GCC_ARCHIVE	:= $(notdir $(GCC_DOWNLOAD))
 GMP_ARCHIVE	:= $(notdir $(GMP_DOWNLOAD))
 MPFR_ARCHIVE	:= $(notdir $(MPFR_DOWNLOAD))
 MPC_ARCHIVE	:= $(notdir $(MPC_DOWNLOAD))
+ISL_ARCHIVE	:= $(notdir $(ISL_DOWNLOAD))
+CLOOG_ARCHIVE	:= $(notdir $(CLOOG_DOWNLOAD))
 GDB_ARCHIVE	:= $(notdir $(GDB_DOWNLOAD))
 GLIBC_ARCHIVE	:= $(notdir $(GLIBC_DOWNLOAD))
 BINUTILS_ARCHIVE	:= $(notdir $(BINUTILS_DOWNLOAD))
@@ -24,12 +28,14 @@ GCC_DIR	?= $(GCC_ARCHIVE:%.tar.xz=%)
 GMP_DIR	?= $(GMP_ARCHIVE:%.tar.lz=%)
 MPFR_DIR	?= $(MPFR_ARCHIVE:%.tar.xz=%)
 MPC_DIR	?= $(MPC_ARCHIVE:%.tar.gz=%)
+ISL_DIR	?= $(ISL_ARCHIVE:%.tar.xz=%)
+CLOOG_DIR	?= $(CLOOG_ARCHIVE:%.tar.gz=%)
 GDB_DIR	?= $(GDB_ARCHIVE:%.tar.xz=%)
 GLIBC_DIR	?= $(GLIBC_ARCHIVE:%.tar.xz=%)
 BINUTILS_DIR	?= $(BINUTILS_ARCHIVE:%.tar.xz=%)
 
 TARGETS	:= gcc gdb binutils glibc
-TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr
+TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr isl cloog
 
 .SECONDARY:
 .DELETE_ON_ERROR:
@@ -38,7 +44,7 @@ TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr
 all: $(TARGETS:%=install-%)
 
 .PHONY: clean
-clean: $(TARGETS_ALL:%=clean-%) clean-$(ARCH) clean-include
+clean: $(TARGETS_ALL:%=clean-%) clean-gcc-first clean-$(ARCH) clean-include
 
 # Directories
 
@@ -64,7 +70,7 @@ $(TARGETS:%=install-%): install-%: %/.install
 	cd $*/build; $(MAKE)
 	@touch $@
 
-%/.install: %/.compile | root
+%/.install: %/.compile
 	cd $*/build; $(MAKE) install
 	@touch $@
 
@@ -76,15 +82,16 @@ clean-%:
 gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
 	cd $|; ../../gcc/$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
-		--enable-languages=c,c++ --enable-threads --disable-multilib
+		--enable-languages=c,c++ --enable-threads --disable-multilib \
+		--without-headers
 	@touch $@
 
 gcc-first/.compile: %/.compile: %/.configure
-	cd $*/build; $(MAKE) all-gcc
+	cd $*/build; $(MAKE) all-gcc all-target-libgcc
 	@touch $@
 
-gcc-first/.install: %/.install: %/.compile | root
-	cd $*/build; $(MAKE) install-gcc
+gcc-first/.install: %/.install: %/.compile
+	cd $*/build; $(MAKE) install-gcc install-target-libgcc
 	@touch $@
 
 gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
@@ -93,10 +100,12 @@ gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
 		--enable-languages=c,c++ --enable-threads --disable-multilib
 	@touch $@
 
-gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract
+gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract isl/.extract cloog/.extract
 	ln -sfr gmp/$(GMP_DIR) gcc/$(GCC_DIR)/gmp
 	ln -sfr mpfr/$(MPFR_DIR) gcc/$(GCC_DIR)/mpfr
 	ln -sfr mpc/$(MPC_DIR) gcc/$(GCC_DIR)/mpc
+	ln -sfr isl/$(ISL_DIR) gcc/$(GCC_DIR)/isl
+	ln -sfr cloog/$(CLOOG_DIR) gcc/$(GCC_DIR)/cloog
 	@touch $@
 
 gdb/.configure: gdb/.extract gcc/.install | gdb/build
@@ -108,7 +117,7 @@ glibc/.configure: glibc/.extract glibc/.headers gcc-first/.install | glibc/build
 	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../$(GLIBC_DIR)/configure \
 		--host=$(ARCH) \
 		--prefix=$(SYSROOT) \
-		--with-sysroot=$(SYSROOT) --with-headers=$(PWD)/include \
+		--with-sysroot=$(SYSROOT) \
 		--enable-strip
 	@touch $@
 
@@ -117,7 +126,7 @@ glibc/.compile: %/.compile: %/.configure
 	@touch $@
 
 glibc/.headers:
-	cd $(KERNEL); ARCH=$(KERNEL_ARCH) $(MAKE) INSTALL_HDR_PATH=$(PWD) headers_install
+	cd $(KERNEL); ARCH=$(KERNEL_ARCH) $(MAKE) INSTALL_HDR_PATH=$(SYSROOT) headers_install
 	@touch $@
 
 binutils/.configure: binutils/.extract | binutils/build
@@ -131,7 +140,7 @@ gcc/.extract: gcc/$(GCC_ARCHIVE)
 %/$(GCC_ARCHIVE): | %
 	wget -O "$@" "$(GCC_DOWNLOAD)"
 
-gmp/.extract: gmp/GMP_ARCHIVE)
+gmp/.extract: gmp/$(GMP_ARCHIVE)
 %/$(GMP_ARCHIVE): | %
 	wget -O "$@" "$(GMP_DOWNLOAD)"
 
@@ -142,6 +151,14 @@ mpfr/.extract: mpfr/$(MPFR_ARCHIVE)
 mpc/.extract: mpc/$(MPC_ARCHIVE)
 %/$(MPC_ARCHIVE): | %
 	wget -O "$@" "$(MPC_DOWNLOAD)"
+
+isl/.extract: isl/$(ISL_ARCHIVE)
+%/$(ISL_ARCHIVE): | %
+	wget -O "$@" "$(ISL_DOWNLOAD)"
+
+cloog/.extract: cloog/$(CLOOG_ARCHIVE)
+%/$(CLOOG_ARCHIVE): | %
+	wget -O "$@" "$(CLOOG_DOWNLOAD)"
 
 gdb/.extract: gdb/$(GDB_ARCHIVE)
 %/$(GDB_ARCHIVE): | %
