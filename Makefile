@@ -1,3 +1,5 @@
+# http://preshing.com/20141119/how-to-build-a-gcc-cross-compiler/
+
 ARCH	?= mipsel-linux
 PREFIX	?= $(PWD)/$(ARCH)
 SYSROOT	:= $(PREFIX)/$(ARCH)
@@ -82,16 +84,24 @@ clean-%:
 gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
 	cd $|; ../../gcc/$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
-		--enable-languages=c,c++ --enable-threads --disable-multilib \
+		--enable-languages=c,c++ --disable-threads --disable-multilib \
 		--without-headers
 	@touch $@
 
 gcc-first/.compile: %/.compile: %/.configure
-	cd $*/build; $(MAKE) all-gcc all-target-libgcc
+	cd $*/build; $(MAKE) all-gcc
+	@touch $@
+
+gcc-first/.libgcc: %/.libgcc: glibc-first/.install %/.configure
+	cd $*/build; $(MAKE) all-target-libgcc
 	@touch $@
 
 gcc-first/.install: %/.install: %/.compile
-	cd $*/build; $(MAKE) install-gcc install-target-libgcc
+	cd $*/build; $(MAKE) install-gcc
+	@touch $@
+
+gcc-first/.libgcc-install: %/.libgcc-install: %/.libgcc
+	cd $*/build; $(MAKE) install-target-libgcc
 	@touch $@
 
 gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
@@ -113,16 +123,39 @@ gdb/.configure: gdb/.extract gcc/.install | gdb/build
 		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) --with-python=yes
 	@touch $@
 
-glibc/.configure: glibc/.extract glibc/.headers gcc-first/.install | glibc/build
-	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../$(GLIBC_DIR)/configure \
+glibc-first/.configure: glibc/.extract glibc/.headers gcc-first/.install | glibc-first/build
+	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../../glibc/$(GLIBC_DIR)/configure \
 		--host=$(ARCH) \
-		--prefix=$(SYSROOT) \
-		--with-sysroot=$(SYSROOT) \
-		--enable-strip
+		--prefix=/ \
+		--with-headers=$(SYSROOT)/include \
+		--enable-strip --disable-multilib
 	@touch $@
+
+glibc-first/.compile: %/.compile: %/.configure
+	cd $*/build; PATH="$$PATH:$(PREFIX)/bin" $(MAKE) csu/subdir_lib
+	@touch $@
+
+glibc-first/.install: %/.install: %/.compile
+	cd $*/build; $(MAKE) install-bootstrap-headers=yes install-headers DESTDIR=$(SYSROOT)
+	cd $*/build; install csu/crt1.o csu/crti.o csu/crtn.o $(SYSROOT)/lib
+	$(PREFIX)/bin/mipsel-linux-gcc -nostdlib -nostartfiles -shared -x c /dev/null -o $(SYSROOT)/lib/libc.so
+	@touch $@
+
+glibc/.configure: glibc/.extract glibc/.headers gcc-first/.libgcc-install | glibc/build
+	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../../glibc/$(GLIBC_DIR)/configure \
+		--host=$(ARCH) \
+		--prefix=/ \
+		--with-headers=$(SYSROOT)/include \
+		--enable-strip --disable-multilib
+	@touch $@
+
 
 glibc/.compile: %/.compile: %/.configure
 	cd $*/build; PATH="$$PATH:$(PREFIX)/bin" $(MAKE)
+	@touch $@
+
+glibc/.install: %/.install: %/.compile
+	cd $*/build; $(MAKE) install DESTDIR=$(SYSROOT)
 	@touch $@
 
 glibc/.headers:
