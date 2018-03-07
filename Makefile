@@ -76,8 +76,7 @@ clean-%:
 gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
 	cd $|; ../../gcc/$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
-		--enable-languages=c,c++ --enable-threads --disable-multilib \
-		--without-headers
+		--enable-languages=c,c++ --enable-threads --disable-multilib
 	@touch $@
 
 gcc-first/.compile: %/.compile: %/.configure
@@ -91,8 +90,7 @@ gcc-first/.install: %/.install: %/.compile | root
 gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
 	cd $|; ../$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
-		--enable-languages=c,c++ --enable-threads --disable-multilib \
-		--with-headers
+		--enable-languages=c,c++ --enable-threads --disable-multilib
 	@touch $@
 
 gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract
