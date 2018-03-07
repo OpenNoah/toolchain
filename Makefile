@@ -22,17 +22,21 @@ MPC_DIR	:= $(MPC_ARCHIVE:%.tar.gz=%)
 .PHONY: all
 all: build-gcc
 
+.PHONY: install
+install: install-gcc
+
 # Directories
 gcc gcc/build gmp mpc mpfr: %:
 	mkdir -p $*
 
-.PHONY: build-gcc
+.PHONY: build-gcc install-gcc
 build-gcc: gcc/.compile
 
-gcc/.compile: gcc/.make
+install-gcc: build-gcc
+	cd gcc/build; $(MAKE) install-gcc
 
-gcc/.make: gcc/.compile
-	cd gcc/build; $(MAKE)
+gcc/.compile: gcc/.configure
+	cd gcc/build; $(MAKE) all-gcc
 	@touch $@
 
 gcc/.configure: gcc/.link | gcc/build
