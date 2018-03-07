@@ -5,43 +5,63 @@ GCC_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
 GMP_DOWNLOAD	:= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
 MPFR_DOWNLOAD	:= http://www.mpfr.org/mpfr-current/mpfr-4.0.1.tar.xz
 MPC_DOWNLOAD	:= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
+GDB_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
+GLIBC_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
 BINUTILS_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
 
 GCC_ARCHIVE	:= $(notdir $(GCC_DOWNLOAD))
 GMP_ARCHIVE	:= $(notdir $(GMP_DOWNLOAD))
 MPFR_ARCHIVE	:= $(notdir $(MPFR_DOWNLOAD))
 MPC_ARCHIVE	:= $(notdir $(MPC_DOWNLOAD))
+GDB_ARCHIVE	:= $(notdir $(GDB_DOWNLOAD))
+GLIBC_ARCHIVE	:= $(notdir $(GLIBC_DOWNLOAD))
 BINUTILS_ARCHIVE	:= $(notdir $(BINUTILS_DOWNLOAD))
 
 GCC_DIR	:= $(GCC_ARCHIVE:%.tar.xz=%)
 GMP_DIR	:= $(GMP_ARCHIVE:%.tar.lz=%)
 MPFR_DIR	:= $(MPFR_ARCHIVE:%.tar.xz=%)
 MPC_DIR	:= $(MPC_ARCHIVE:%.tar.gz=%)
+GDB_DIR	:= $(GDB_ARCHIVE:%.tar.xz=%)
+GLIBC_DIR	:= $(GLIBC_ARCHIVE:%.tar.xz=%)
 BINUTILS_DIR	:= $(BINUTILS_ARCHIVE:%.tar.xz=%)
+
+TARGETS	:= gcc gdb binutils glibc
+TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr
 
 .SECONDARY:
 .DELETE_ON_ERROR:
 
 .PHONY: all
-all: build-gcc
+all: $(TARGETS:%=install-%)
 
 .PHONY: clean
-clean: clean-gcc clean-gmp clean-mpc clean-mpfr clean-binutils clean-root
+clean: $(TARGETS_ALL:%=clean-%) clean-root
 
 # Directories
-gcc gmp mpc mpfr binutils:
+
+$(TARGETS_ALL) root:
 	mkdir -p $@
 
-%/build %/root:
+%/build:
 	mkdir -p $@
 
 # Common rules
+
+.PHONY: $(TARGETS:%=build-%)
+$(TARGETS:%=build-%): build-%: %/.compile
+
+.PHONY: $(TARGETS:%=install-%)
+$(TARGETS:%=install-%): install-%: %/.install
+
+%/.extract:
+	tar axf "$<" -C $*
+	@touch $@
 
 %/.compile: %/.configure
 	cd $*/build; $(MAKE)
 	@touch $@
 
-%/.install: %/.compile | %/root
+%/.install: %/.compile | root
 	cd $*/build; $(MAKE) install
 	@touch $@
 
@@ -50,11 +70,26 @@ clean-%:
 
 # Target specific rules
 
-.PHONY: build-gcc build-binutils
-build-gcc build-binutils: build-%: %/.compile
+gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
+	cd $|; ../../gcc/$(GCC_DIR)/configure --target=mipsel-linux \
+		--prefix=$(PREFIX) \
+		--enable-languages=c,c++ --enable-threads --disable-multilib \
+		--without-headers
+	@touch $@
 
-gcc/.configure: gcc/.link binutils/.install | gcc/build
-	cd $|; ../$(GCC_DIR)/configure --target=mipsel-linux --prefix=$(PREFIX) --with-sysroot=$(SYSROOT) --enable-threads --disable-multilib --enable-languages=c,c++
+gcc-first/.compile: %/.compile: %/.configure
+	cd $*/build; $(MAKE) all-gcc
+	@touch $@
+
+gcc-first/.install: %/.install: %/.compile | root
+	cd $*/build; $(MAKE) install-gcc
+	@touch $@
+
+gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
+	cd $|; ../$(GCC_DIR)/configure --target=mipsel-linux \
+		--prefix=$(PREFIX) \
+		--enable-languages=c,c++ --enable-threads --disable-multilib \
+		--with-headers
 	@touch $@
 
 gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract
@@ -63,45 +98,48 @@ gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract
 	ln -sfr mpc/$(MPC_DIR) gcc/$(GCC_DIR)/mpc
 	@touch $@
 
-binutils/.configure: binutils/.extract | binutils/build
-	cd $|; ../$(BINUTILS_DIR)/configure --target=mipsel-linux --prefix=$(PREFIX) --with-sysroot=$(SYSROOT)
+gdb/.configure: gdb/.extract gcc/.install | gdb/build
+	cd $|; ../$(GDB_DIR)/configure --target=mipsel-linux \
+		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) --with-python=yes
 	@touch $@
 
-# Download archives
+glibc/.configure: glibc/.extract gcc-first/.install | glibc/build
+	cd $|; ../$(GLIBC_DIR)/configure --host=mipsel-linux \
+		--prefix=$(SYSROOT) --with-sysroot=$(SYSROOT) \
+		--enable-strip
+	@touch $@
 
-gcc/$(GCC_ARCHIVE): | gcc
-	wget -O "$@" "$(GCC_DOWNLOAD)"
+binutils/.configure: binutils/.extract | binutils/build
+	cd $|; ../$(BINUTILS_DIR)/configure --target=mipsel-linux \
+		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT)
+	@touch $@
 
-gmp/$(GMP_ARCHIVE): | gmp
-	wget -O "$@" "$(GMP_DOWNLOAD)"
-
-mpfr/$(MPFR_ARCHIVE): | mpfr
-	wget -O "$@" "$(MPFR_DOWNLOAD)"
-
-mpc/$(MPC_ARCHIVE): | mpc
-	wget -O "$@" "$(MPC_DOWNLOAD)"
-
-binutils/$(BINUTILS_ARCHIVE): | binutils
-	wget -O "$@" "$(BINUTILS_DOWNLOAD)"
-
-# Extract archives
+# Archives
 
 gcc/.extract: gcc/$(GCC_ARCHIVE)
-	tar axf "$<" -C gcc
-	@touch $@
+%/$(GCC_ARCHIVE): | %
+	wget -O "$@" "$(GCC_DOWNLOAD)"
 
-gmp/.extract: gmp/$(GMP_ARCHIVE)
-	tar axf "$<" -C gmp
-	@touch $@
+gmp/.extract: gmp/GMP_ARCHIVE)
+%/$(GMP_ARCHIVE): | %
+	wget -O "$@" "$(GMP_DOWNLOAD)"
 
 mpfr/.extract: mpfr/$(MPFR_ARCHIVE)
-	tar axf "$<" -C mpfr
-	@touch $@
+%/$(MPFR_ARCHIVE): | %
+	wget -O "$@" "$(MPFR_DOWNLOAD)"
 
 mpc/.extract: mpc/$(MPC_ARCHIVE)
-	tar axf "$<" -C mpc
-	@touch $@
+%/$(MPC_ARCHIVE): | %
+	wget -O "$@" "$(MPC_DOWNLOAD)"
+
+gdb/.extract: gdb/$(GDB_ARCHIVE)
+%/$(GDB_ARCHIVE): | %
+	wget -O "$@" "$(GDB_DOWNLOAD)"
+
+glibc/.extract: glibc/$(GLIBC_ARCHIVE)
+%/$(GLIBC_ARCHIVE): | %
+	wget -O "$@" "$(GLIBC_DOWNLOAD)"
 
 binutils/.extract: binutils/$(BINUTILS_ARCHIVE)
-	tar axf "$<" -C binutils
-	@touch $@
+%/$(BINUTILS_ARCHIVE): | %
+	wget -O "$@" "$(BINUTILS_DOWNLOAD)"
