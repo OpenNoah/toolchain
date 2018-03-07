@@ -83,8 +83,9 @@ clean-%:
 
 gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
 	cd $|; ../../gcc/$(GCC_DIR)/configure --target=$(ARCH) \
-		--prefix=$(PREFIX) \
+		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) \
 		--enable-languages=c,c++ --disable-threads --disable-multilib \
+		--with-native-system-header-dir=/include \
 		--without-headers
 	@touch $@
 
@@ -106,8 +107,11 @@ gcc-first/.libgcc-install: %/.libgcc-install: %/.libgcc
 
 gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
 	cd $|; ../$(GCC_DIR)/configure --target=$(ARCH) \
-		--prefix=$(PREFIX) \
-		--enable-languages=c,c++ --enable-threads --disable-multilib
+		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) \
+		--with-build-sysroot=$(SYSROOT) \
+		--enable-languages=c,c++ --enable-threads --disable-multilib \
+		--with-native-system-header-dir=/include \
+		--with-headers
 	@touch $@
 
 gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract isl/.extract cloog/.extract
@@ -126,7 +130,7 @@ gdb/.configure: gdb/.extract gcc/.install | gdb/build
 glibc-first/.configure: glibc/.extract glibc/.headers gcc-first/.install | glibc-first/build
 	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../../glibc/$(GLIBC_DIR)/configure \
 		--host=$(ARCH) \
-		--prefix=/ \
+		--prefix= \
 		--with-headers=$(SYSROOT)/include \
 		--enable-strip --disable-multilib
 	@touch $@
@@ -139,16 +143,16 @@ glibc-first/.install: %/.install: %/.compile
 	cd $*/build; $(MAKE) install-bootstrap-headers=yes install-headers DESTDIR=$(SYSROOT)
 	cd $*/build; install csu/crt1.o csu/crti.o csu/crtn.o $(SYSROOT)/lib
 	$(PREFIX)/bin/mipsel-linux-gcc -nostdlib -nostartfiles -shared -x c /dev/null -o $(SYSROOT)/lib/libc.so
+	touch $(SYSROOT)/include/gnu/stubs.h
 	@touch $@
 
 glibc/.configure: glibc/.extract glibc/.headers gcc-first/.libgcc-install | glibc/build
 	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../../glibc/$(GLIBC_DIR)/configure \
 		--host=$(ARCH) \
-		--prefix=/ \
+		--prefix= \
 		--with-headers=$(SYSROOT)/include \
 		--enable-strip --disable-multilib
 	@touch $@
-
 
 glibc/.compile: %/.compile: %/.configure
 	cd $*/build; PATH="$$PATH:$(PREFIX)/bin" $(MAKE)
