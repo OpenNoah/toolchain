@@ -1,13 +1,14 @@
-PREFIX	:= $(PWD)/root
-SYSROOT	:= $(PREFIX)/mipsel-linux
+ARCH	?= mipsel-linux
+PREFIX	?= $(PWD)/$(ARCH)
+SYSROOT	:= $(PREFIX)/$(ARCH)
 
-GCC_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
-GMP_DOWNLOAD	:= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
-MPFR_DOWNLOAD	:= http://www.mpfr.org/mpfr-current/mpfr-4.0.1.tar.xz
-MPC_DOWNLOAD	:= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
-GDB_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
-GLIBC_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
-BINUTILS_DOWNLOAD	:= ftp://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
+GCC_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
+GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
+MPFR_DOWNLOAD	?= http://www.mpfr.org/mpfr-current/mpfr-4.0.1.tar.xz
+MPC_DOWNLOAD	?= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
+GDB_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
+GLIBC_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
+BINUTILS_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
 
 GCC_ARCHIVE	:= $(notdir $(GCC_DOWNLOAD))
 GMP_ARCHIVE	:= $(notdir $(GMP_DOWNLOAD))
@@ -17,13 +18,13 @@ GDB_ARCHIVE	:= $(notdir $(GDB_DOWNLOAD))
 GLIBC_ARCHIVE	:= $(notdir $(GLIBC_DOWNLOAD))
 BINUTILS_ARCHIVE	:= $(notdir $(BINUTILS_DOWNLOAD))
 
-GCC_DIR	:= $(GCC_ARCHIVE:%.tar.xz=%)
-GMP_DIR	:= $(GMP_ARCHIVE:%.tar.lz=%)
-MPFR_DIR	:= $(MPFR_ARCHIVE:%.tar.xz=%)
-MPC_DIR	:= $(MPC_ARCHIVE:%.tar.gz=%)
-GDB_DIR	:= $(GDB_ARCHIVE:%.tar.xz=%)
-GLIBC_DIR	:= $(GLIBC_ARCHIVE:%.tar.xz=%)
-BINUTILS_DIR	:= $(BINUTILS_ARCHIVE:%.tar.xz=%)
+GCC_DIR	?= $(GCC_ARCHIVE:%.tar.xz=%)
+GMP_DIR	?= $(GMP_ARCHIVE:%.tar.lz=%)
+MPFR_DIR	?= $(MPFR_ARCHIVE:%.tar.xz=%)
+MPC_DIR	?= $(MPC_ARCHIVE:%.tar.gz=%)
+GDB_DIR	?= $(GDB_ARCHIVE:%.tar.xz=%)
+GLIBC_DIR	?= $(GLIBC_ARCHIVE:%.tar.xz=%)
+BINUTILS_DIR	?= $(BINUTILS_ARCHIVE:%.tar.xz=%)
 
 TARGETS	:= gcc gdb binutils glibc
 TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr
@@ -71,7 +72,7 @@ clean-%:
 # Target specific rules
 
 gcc-first/.configure: gcc/.link binutils/.install | gcc-first/build
-	cd $|; ../../gcc/$(GCC_DIR)/configure --target=mipsel-linux \
+	cd $|; ../../gcc/$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
 		--enable-languages=c,c++ --enable-threads --disable-multilib \
 		--without-headers
@@ -86,7 +87,7 @@ gcc-first/.install: %/.install: %/.compile | root
 	@touch $@
 
 gcc/.configure: glibc/.install gcc/.link binutils/.install | gcc/build
-	cd $|; ../$(GCC_DIR)/configure --target=mipsel-linux \
+	cd $|; ../$(GCC_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) \
 		--enable-languages=c,c++ --enable-threads --disable-multilib \
 		--with-headers
@@ -99,18 +100,18 @@ gcc/.link: gcc/.extract gmp/.extract mpfr/.extract mpc/.extract
 	@touch $@
 
 gdb/.configure: gdb/.extract gcc/.install | gdb/build
-	cd $|; ../$(GDB_DIR)/configure --target=mipsel-linux \
+	cd $|; ../$(GDB_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) --with-python=yes
 	@touch $@
 
 glibc/.configure: glibc/.extract gcc-first/.install | glibc/build
-	cd $|; ../$(GLIBC_DIR)/configure --host=mipsel-linux \
+	cd $|; ../$(GLIBC_DIR)/configure --host=$(ARCH) \
 		--prefix=$(SYSROOT) --with-sysroot=$(SYSROOT) \
 		--enable-strip
 	@touch $@
 
 binutils/.configure: binutils/.extract | binutils/build
-	cd $|; ../$(BINUTILS_DIR)/configure --target=mipsel-linux \
+	cd $|; ../$(BINUTILS_DIR)/configure --target=$(ARCH) \
 		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT)
 	@touch $@
 
