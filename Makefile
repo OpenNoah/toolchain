@@ -37,7 +37,7 @@ GLIBC_DIR	?= $(GLIBC_ARCHIVE:%.tar.xz=%)
 BINUTILS_DIR	?= $(BINUTILS_ARCHIVE:%.tar.xz=%)
 
 TARGETS	:= gcc gdb binutils glibc
-TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr isl cloog
+TARGETS_ALL	:= $(ARCH) $(TARGETS) gcc-first glibc-first gmp mpc mpfr isl cloog
 
 .SECONDARY:
 .DELETE_ON_ERROR:
@@ -46,7 +46,7 @@ TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr isl cloog
 all: $(TARGETS:%=install-%)
 
 .PHONY: clean
-clean: $(TARGETS_ALL:%=clean-%) clean-gcc-first clean-$(ARCH) clean-include
+clean: $(TARGETS_ALL:%=clean-%)
 
 # Directories
 
