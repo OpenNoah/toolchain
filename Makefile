@@ -1,6 +1,8 @@
 ARCH	?= mipsel-linux
 PREFIX	?= $(PWD)/$(ARCH)
 SYSROOT	:= $(PREFIX)/$(ARCH)
+KERNEL	?= $(PWD)/../linux-new
+KERNEL_ARCH	?= mips
 
 GCC_DOWNLOAD	?= ftp://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
 GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
@@ -36,11 +38,11 @@ TARGETS_ALL	:= $(TARGETS) gmp mpc mpfr
 all: $(TARGETS:%=install-%)
 
 .PHONY: clean
-clean: $(TARGETS_ALL:%=clean-%) clean-root
+clean: $(TARGETS_ALL:%=clean-%) clean-$(ARCH) clean-include
 
 # Directories
 
-$(TARGETS_ALL) root:
+$(TARGETS_ALL):
 	mkdir -p $@
 
 %/build:
@@ -104,10 +106,20 @@ gdb/.configure: gdb/.extract gcc/.install | gdb/build
 		--prefix=$(PREFIX) --with-sysroot=$(SYSROOT) --with-python=yes
 	@touch $@
 
-glibc/.configure: glibc/.extract gcc-first/.install | glibc/build
-	cd $|; ../$(GLIBC_DIR)/configure --host=$(ARCH) \
-		--prefix=$(SYSROOT) --with-sysroot=$(SYSROOT) \
+glibc/.configure: glibc/.extract glibc/.headers gcc-first/.install | glibc/build
+	cd $|; PATH="$$PATH:$(PREFIX)/bin" ../$(GLIBC_DIR)/configure \
+		--host=$(ARCH) \
+		--prefix=$(SYSROOT) \
+		--with-sysroot=$(SYSROOT) --with-headers=$(PWD)/include \
 		--enable-strip
+	@touch $@
+
+glibc/.compile: %/.compile: %/.configure
+	cd $*/build; PATH="$$PATH:$(PREFIX)/bin" $(MAKE)
+	@touch $@
+
+glibc/.headers:
+	cd $(KERNEL); ARCH=$(KERNEL_ARCH) $(MAKE) INSTALL_HDR_PATH=$(PWD) headers_install
 	@touch $@
 
 binutils/.configure: binutils/.extract | binutils/build
