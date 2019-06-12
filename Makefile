@@ -6,15 +6,15 @@ SYSROOT	:= $(PREFIX)/$(ARCH)
 KERNEL	?= $(PWD)/../linux-new
 KERNEL_ARCH	?= mips
 
-GCC_DOWNLOAD	?= https://ftp.gnu.org/gnu/gcc/gcc-7.3.0/gcc-7.3.0.tar.xz
+GCC_DOWNLOAD	?= https://ftp.gnu.org/gnu/gcc/gcc-9.1.0/gcc-9.1.0.tar.xz
 GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
-MPFR_DOWNLOAD	?= http://www.mpfr.org/mpfr-current/mpfr-4.0.1.tar.xz
+MPFR_DOWNLOAD	?= https://www.mpfr.org/mpfr-current/mpfr-4.0.2.tar.xz
 MPC_DOWNLOAD	?= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
-ISL_DOWNLOAD	?= http://isl.gforge.inria.fr/isl-0.19.tar.xz
+ISL_DOWNLOAD	?= http://isl.gforge.inria.fr/isl-0.21.tar.xz
 CLOOG_DOWNLOAD	?= https://www.bastoul.net/cloog/pages/download/cloog-0.18.4.tar.gz
-GDB_DOWNLOAD	?= https://ftp.gnu.org/gnu/gdb/gdb-8.1.tar.xz
-GLIBC_DOWNLOAD	?= https://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.xz
-BINUTILS_DOWNLOAD	?= https://ftp.gnu.org/gnu/binutils/binutils-2.30.tar.xz
+GDB_DOWNLOAD	?= https://ftp.gnu.org/gnu/gdb/gdb-8.3.tar.xz
+GLIBC_DOWNLOAD	?= https://ftp.gnu.org/gnu/glibc/glibc-2.29.tar.xz
+BINUTILS_DOWNLOAD	?= https://ftp.gnu.org/gnu/binutils/binutils-2.32.tar.xz
 
 GCC_ARCHIVE	:= $(notdir $(GCC_DOWNLOAD))
 GMP_ARCHIVE	:= $(notdir $(GMP_DOWNLOAD))
