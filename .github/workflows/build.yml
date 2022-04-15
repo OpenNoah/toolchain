@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 'OpenNoah/linux-new'
-          ref: 'np-5.5'
+          ref: 'np-5.17.3'
           path: 'linux'
       - name: Configure linux
         run: |
@@ -20,10 +20,10 @@ jobs:
       - name: Build mipsel-linux
         run: |
           PATH="$PATH:$PWD/mipsel-linux/bin" make -j2 KERNEL=$PWD/linux
-      - name: Archive mipsel-linux
-        run: tar acvf mipsel-linux.tar.xz mipsel-linux
+#      - name: Archive mipsel-linux
+#        run: tar acvf mipsel-linux.tar.xz mipsel-linux
       - name: Upload mipsel-linux
         uses: actions/upload-artifact@v3
         with:
-          name: mipsel-linux
-          path: mipsel-linux.tar.xz
+          name: mipsel-linux-5.17.3
+          path: mipsel-linux
