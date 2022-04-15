@@ -1,0 +1,28 @@
+name: Build toolchain
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Check out linux-new
+        uses: actions/checkout@v3
+        with:
+          repository: 'OpenNoah/linux-new'
+          ref: 'np-5.5'
+          path: 'linux'
+      - name: Configure linux
+        run: |
+          cd linux
+          ARCH=mips make noah_np1380_defconfig
+      - name: Build mipsel-linux
+        run: make -j2 KERNEL=$PWD/linux
+      - name: Archive mipsel-linux
+        run: tar acvf mipsel-linux.tar.xz mipsel-linux
+      - name: Upload mipsel-linux
+        uses: actions/upload-artifact@v3
+        with:
+          name: mipsel-linux
+          path: mipsel-linux.tar.xz
