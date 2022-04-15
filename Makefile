@@ -6,15 +6,15 @@ SYSROOT	:= $(PREFIX)/$(ARCH)
 KERNEL	?= $(PWD)/../linux-new
 KERNEL_ARCH	?= mips
 
-GCC_DOWNLOAD	?= https://ftp.gnu.org/gnu/gcc/gcc-9.3.0/gcc-9.3.0.tar.xz
-GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.2.0.tar.xz
-MPFR_DOWNLOAD	?= https://www.mpfr.org/mpfr-current/mpfr-4.0.2.tar.xz
-MPC_DOWNLOAD	?= https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz
-ISL_DOWNLOAD	?= http://isl.gforge.inria.fr/isl-0.22.1.tar.xz
+GCC_DOWNLOAD	?= https://ftp.gnu.org/gnu/gcc/gcc-11.2.0/gcc-11.2.0.tar.xz
+GMP_DOWNLOAD	?= https://gmplib.org/download/gmp/gmp-6.2.1.tar.xz
+MPFR_DOWNLOAD	?= https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.xz
+MPC_DOWNLOAD	?= https://ftp.gnu.org/gnu/mpc/mpc-1.2.1.tar.gz
+ISL_DOWNLOAD	?= https://libisl.sourceforge.io/isl-0.24.tar.xz
 CLOOG_DOWNLOAD	?= http://www.bastoul.net/cloog/pages/download/cloog-0.18.4.tar.gz
-GDB_DOWNLOAD	?= https://ftp.gnu.org/gnu/gdb/gdb-9.1.tar.xz
-GLIBC_DOWNLOAD	?= https://ftp.gnu.org/gnu/glibc/glibc-2.31.tar.xz
-BINUTILS_DOWNLOAD	?= https://ftp.gnu.org/gnu/binutils/binutils-2.34.tar.xz
+GDB_DOWNLOAD	?= https://ftp.gnu.org/gnu/gdb/gdb-11.2.tar.xz
+GLIBC_DOWNLOAD	?= https://ftp.gnu.org/gnu/glibc/glibc-2.35.tar.xz
+BINUTILS_DOWNLOAD	?= https://ftp.gnu.org/gnu/binutils/binutils-2.38.tar.xz
 
 GCC_ARCHIVE	:= $(notdir $(GCC_DOWNLOAD))
 GMP_ARCHIVE	:= $(notdir $(GMP_DOWNLOAD))
@@ -67,6 +67,8 @@ $(TARGETS:%=install-%): install-%: %/.install
 %/.extract:
 	tar axf "$<" -C $*
 	@touch $@
+
+%/.configure: %/.extract
 
 %/.compile: %/.configure
 	cd $*/build; $(MAKE)
