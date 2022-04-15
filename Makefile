@@ -185,7 +185,7 @@ gmp/.extract: gmp/$(GMP_ARCHIVE)
 
 mpfr/.extract: mpfr/$(MPFR_ARCHIVE)
 %/$(MPFR_ARCHIVE): | %
-	wget -O "$@" "$(MPFR_DOWNLOAD)"
+	wget -O "$@" "$(MPFR_DOWNLOAD)" --no-check-certificate
 
 mpc/.extract: mpc/$(MPC_ARCHIVE)
 %/$(MPC_ARCHIVE): | %
