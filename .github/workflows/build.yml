@@ -19,11 +19,19 @@ jobs:
           ARCH=mips make noah_np1380_defconfig
       - name: Build mipsel-linux
         run: |
-          PATH="$PATH:$PWD/mipsel-linux/bin" make -j2 KERNEL=$PWD/linux
+          PATH="$PATH:$PWD/mipsel-linux/bin" make -j2 KERNEL="$PWD/linux"
+      - name: Archive
+        run: |
+          KERNEL="$PWD/linux" ./release.sh
+          echo "RELEASE=$(echo *.tar.xz)" >> $GITHUB_ENV
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.RELEASE }}
 #      - name: Archive mipsel-linux
 #        run: tar acvf mipsel-linux.tar.xz mipsel-linux
-      - name: Upload mipsel-linux
-        uses: actions/upload-artifact@v3
-        with:
-          name: mipsel-linux-5.17.3
-          path: mipsel-linux
+#      - name: Upload mipsel-linux
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: mipsel-linux-5.17.3
+#          path: mipsel-linux
