@@ -18,7 +18,8 @@ jobs:
           cd linux
           ARCH=mips make noah_np1380_defconfig
       - name: Build mipsel-linux
-        run: make -j2 KERNEL=$PWD/linux
+        run: |
+          PATH="$PATH:$PWD/mipsel-linux/bin" make -j2 KERNEL=$PWD/linux
       - name: Archive mipsel-linux
         run: tar acvf mipsel-linux.tar.xz mipsel-linux
       - name: Upload mipsel-linux
